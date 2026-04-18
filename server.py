@@ -4,10 +4,15 @@ from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from google import genai
 
+import os
+from flask import send_from_directory
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__, static_folder="dist", template_folder="dist", static_url_path="")
+basedir = os.path.abspath(os.path.dirname(__file__))
+dist_path = os.path.join(basedir, 'dist')
+
+app = Flask(__name__, static_folder=dist_path, template_folder=dist_path, static_url_path="")
 CORS(app) # Enable CORS for React development
 
 # Configure Gemini
@@ -28,9 +33,13 @@ def call_gemini(prompt):
     except Exception as e:
         raise Exception(f"Gemini API Error: {str(e)}")
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(os.path.join(dist_path, path)):
+        return send_from_directory(dist_path, path)
+    else:
+        return render_template('index.html')
 
 @app.route("/api/workout", methods=["POST"])
 def generate_workout():
